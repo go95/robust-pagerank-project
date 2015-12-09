@@ -1,4 +1,5 @@
 import numpy as np
+from cvxpy import *
 
 small_graph = np.array([[0,0,1,0,0,0,0,0,0,0,0,0],
                         [1,0,0,0,0,0,0,0,0,0,0,0],
@@ -52,49 +53,73 @@ def pagerank (self, M):
 
 # note: if it is more convenient to you, you can use one function with additional parameter instead of two functions for robust pagerank
 
-def robust_pagerank_euklid_test (self, M): #TODO specify the implementation of the algorithm in the docs
+def robust_pagerank_euklid_test (self, M, alpha):
     """
     This is a wrapper function to test peformance of our algorithm for robust pagerank against the existing one.
     Here we use euklid norms both for a and b.
-    It implements an iterative approach and also returns the arrays of deviations
-    from the optimum on every step to evaluate the rate of convergence
-
-    The original algorithm is that of ...
 
     args:
+    
         M - contingency matrix of a graph, scaled to be a probabilistic matrix (numpy nxn array)
 
-    return (weights, conv_func, conv_norm)
-        weights - the pagerank_score (numpy n*1 vector)
-        conv_func - numpy vector with deviations from the optimum, described in terms of target function
-        conv_norm - numpy vector with deviations from the optimum, described in terms of norm (euklid?)
-    """
-    weights = np.zeros((M.shape[0], 1))
-    conv_func = np.array([]) #if it is more convenient to you, you can use simple python list here
-    conv_norm = np.array([]) #if it is more convenient to you, you can use simple python list here
-    return (weights, conv_func, conv_norm)
+        alpha - regularization parameter
 
-def robust_pagerank_max_test (self, M): #TODO specify the implementation of the algorithm in the docs
+    return weights
+
+        weights - the pagerank_score (numpy n*1 vector)
+
+    """
+
+    dim = M.shape[0]
+
+    # define the problem
+
+    x = Variable(shape)
+    objective = Minimize(sum_squares(M*x) + alpha * sum_squares(x))
+    constraints = [sum_entries(x) == 1, 0 <= x]
+    prob = Problem(objective, constraints)
+
+    # solve the problem
+
+    result = prob.solve()
+
+    weights = x.value
+
+    return weights
+
+def robust_pagerank_max_test (self, alpha): #TODO specify the implementation of the algorithm in the docs
     """
     This is a wrapper function to test peformance of our algorithm for robust pagerank against the existing one.
     Here we use max norms both for a and b.
-    It implements an iterative approach and also returns the arrays of deviations
-    from the optimum on every step to evaluate the rate of convergence
-
-    The original algorithm is that of ...
 
     args:
+
         M - contingency matrix of a graph, scaled to be a probabilistic matrix (numpy nxn array)
 
-    return (weights, conv_func, conv_norm)
+        alpha - regularization parameter
+
+    return weights
+
         weights - the pagerank_score (numpy n*1 vector)
-        conv_func - numpy vector with deviations from the optimum, described in terms of target function
-        conv_norm - numpy vector with deviations from the optimum, described in terms of norm (euklid?)
+
     """
-    weights = np.zeros((M.shape[0], 1))
-    conv_func = np.array([]) #if it is more convenient to you, you can use simple python list here
-    conv_norm = np.array([]) #if it is more convenient to you, you can use simple python list here
-    return (weights, conv_func, conv_norm)
+
+    dim = M.shape[0]
+
+    # define the problem
+
+    x = Variable(shape)
+    objective = Minimize(norm(M*x, 'inf') + alpha * norm(x, inf))
+    constraints = [sum_entries(x) == 1, 0 <= x]
+    prob = Problem(objective, constraints)
+
+    # solve the problem
+
+    result = prob.solve()
+
+    weights = x.value
+
+    return weights
 
 
 def robust_alternative_test (self, M): #TODO Please, specify the algorithm and it's implementation in the docs
