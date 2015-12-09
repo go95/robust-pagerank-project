@@ -14,6 +14,17 @@ small_graph = np.array([[0,0,1,0,0,0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0,0.5,0,0.5,0,0],
                         [0,0,0,0,0,0,0,0.5,0.5,0,0,0]])
 
+alpha = 0.85 #damping factor            
+                   
+def maxnorm(x1, x2):
+    norm = 0
+    for i in range(len(x1)):
+        if (abs(x1[i]-x2[i]) > norm):
+            norm = abs(x1[i]-x2[i])
+    return norm
+    
+accuracy = 10**(-6)
+
 def eigenvector (self, M):
     """
     The function gets a contingency matrix of a graph and computes the left eigenvector associated
@@ -27,10 +38,51 @@ def eigenvector (self, M):
         conv_func - numpy vector with deviations from the optimum, described in terms of target function
         conv_norm - numpy vector with deviations from the optimum, described in terms of norm (euklid?)
     """
-    weights = np.zeros((M.shape[0], 1))
-    conv_func = np.array([]) #if it is more convenient to you, you can use simple python list here
-    conv_norm = np.array([]) #if it is more convenient to you, you can use simple python list here
-    return (weights, conv_func, conv_norm)
+    #M - hyperlink matrix
+
+    n = len(M)
+    
+    v = [] #personalization vector
+    for i in range(n):
+        v.append(1/n)   
+        
+    d = []#dangling nodes column
+    for i in range(n):
+        iszero = 1
+        for j in range(n):
+            if (M[i, j] != 0): iszero = 0
+        d.append(iszero)
+    d = np.matrix(d).T
+    
+    S = M + d*v #matrix with fixed dangling nodes
+    
+    e = [] # column of all 1's
+    for i in range(n):
+        e.append(1)
+    e = np.matrix(e).T
+    
+    G = alpha*S+(1-alpha)*e*v #Google matrix
+    
+    x = []#iterations to optimum
+    conv_norm = []#deviations from optimum
+    x.append(v)
+    k = 0
+    
+    x_new = alpha*(np.matrix(x[k])*M)+alpha*(np.matrix(x[k])*d)*v+(1-alpha)*np.matrix(v)
+    x.append(x_new.getA1())
+    k+=1
+    
+    while(maxnorm(x[k], x[k-1]) > accuracy):
+        x_new = alpha*(np.matrix(x[k])*M)+alpha*(np.matrix(x[k])*d)*v+(1-alpha)*np.matrix(v)
+        x.append(x_new.getA1())
+        k+=1
+    
+    for i in range(0, k-1):
+        conv_norm.append(maxnorm(x[k], x[i]))
+        
+    weights = x[k]
+    
+    return (weights, conv_norm)
 
 def pagerank (self, M):
     """
