@@ -21,6 +21,7 @@ small_graph = np.array([[0,0,1,0,0,0,0,0,0,0,0,0],
 
 
 alpha = 0.85 #damping factor
+eps = 0.7
 
 # open compressed p2p_gnut archive
 
@@ -40,6 +41,19 @@ def maxnorm(x1, x2):
         if (abs(x1[i]-x2[i]) > norm):
             norm = abs(x1[i]-x2[i])
     return norm
+
+def maxnormdiffer(x1, x2):
+    norm = 0
+    for i in range(len(x1)):
+        if (abs(x1[i]-x2[i]) > norm):
+            norm = abs(x1[i]-x2[i])
+    return norm
+    
+def euclnorm(x):
+    norm = 0
+    for i in range(len(x)):
+        norm += abs(x[i])**(2)
+    return math.sqrt(norm)
 
 accuracy = 10**(-6)
 
@@ -101,8 +115,23 @@ def eigenvector (self, M):
     weights = x[k]
 
     return (weights, conv_norm)
+    
+def DW(x, beta): # x - column, beta - constant
+    
+    return np.matrix([0]*len(x)).T
 
-def pagerank (self, M):
+def DU(y, delta): # y - column, delta - constant
+    
+    return np.matrix([0]*len(y)).T
+    
+def q_x(x, y, M): #M is column-stochastic, x,y - columns
+    v = M.T*(y)-y.T+eps*(x)/(euclnorm(x))
+    return v
+    
+def q_y(x, y, M): #M is column-stochastic, x,y - columns
+    return (M*(x)-x)    
+
+def pagerank (M, beta0, delta0): #M is column-stochastic
     """
     The function gets a contingency matrix of a graph and computes the pagerank score with alpha = 0.85
     It implements an iterative approach and also returns the arrays of deviations
@@ -115,11 +144,61 @@ def pagerank (self, M):
         conv_func - numpy vector with deviations from the optimum, described in terms of target function
         conv_norm - numpy vector with deviations from the optimum, described in terms of norm (euklid?)
     """
-    alpha = 0.85
-    weights = np.zeros((M.shape[0], 1))
-    conv_func = np.array([]) #if it is more convenient to you, you can use simple python list here
-    conv_norm = np.array([]) #if it is more convenient to you, you can use simple python list here
-    return (weights, conv_func, conv_norm)
+    weigths = []
+    conv_norm = [] 
+    conv_iter = []#iterations to optimum
+    
+    N = len(M)
+    
+    dzeta0 = np.matrix([0]*N).T
+    eta0 = np.matrix([0]*N).T
+    
+    x0 = -DW(dzeta0, beta0)
+    y0 = -DU(eta0, delta0)
+    
+    x = []
+    y = []
+    dzeta = []
+    eta = []
+    
+    k = 1
+    x.append(x0)
+    y.append(y0)
+    dzeta.append(dzeta0)
+    eta.append(eta0)
+    
+    xaver = np.matrix([0]*N).T #x average        
+    
+    beta = beta0*math.sqrt(k)
+    delta = delta0*math.sqrt(k)
+    dzeta.append((dzeta[k-1] + q_x(x[k-1], y[k-1], M)))
+    eta.append((eta[k-1] - q_y(x[k-1], y[k-1], M)))
+    x.append(-DW(dzeta[k-1], beta))
+    y.append(-DU(eta[k-1], delta))
+    
+    xaver = xaver*(1-1/k)+(x[k-1])*(1/k)
+    conv_iter.append([0]*N)    
+    conv_iter.append(xaver.getA1())
+    k+=1    
+    
+    while(maxnormdiffer(conv_iter[k-1], conv_iter[k-2]) > 10**(-6)):
+        beta = beta0*math.sqrt(k)
+        delta = delta0*math.sqrt(k)
+        dzeta.append(dzeta[k-1] + q_x(x[k-1], y[k-1], M))
+        eta.append(eta[k-1] - q_y(x[k-1], y[k-1], M))
+        x.append(-DW(dzeta[k-1], beta))
+        y.append(-DU(eta[k-1], delta))
+        
+        xaver = xaver*(1-1/k)+x[:-1]*(1/n)
+        conv_iter.append(xaver.getA1())
+        k+=1
+        
+    weigths = xaver.getA1()
+    
+    for i in range(k):
+        conv_norm.append(maxnormdiffer(conv_iter[k-1], xaver))
+    
+    return weigths, conv_norm
 
 # note: if it is more convenient to you, you can use one function with additional parameter instead of two functions for robust pagerank
 
@@ -214,4 +293,4 @@ def robust_alternative_test (self, M): #TODO Please, specify the algorithm and i
     conv_norm = np.array([]) #if it is more convenient to you, you can use simple python list here
     return (weights, conv_func, conv_norm)
 
-print small_graph
+print(small_graph)
