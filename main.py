@@ -1,5 +1,9 @@
 import numpy as np
+import pandas as pd
+import tarfile
 from cvxpy import *
+
+# small graph for algo testing
 
 small_graph = np.array([[0,0,1,0,0,0,0,0,0,0,0,0],
                         [1,0,0,0,0,0,0,0,0,0,0,0],
@@ -14,15 +18,29 @@ small_graph = np.array([[0,0,1,0,0,0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0,0.5,0,0.5,0,0],
                         [0,0,0,0,0,0,0,0.5,0.5,0,0,0]])
 
-alpha = 0.85 #damping factor            
-                   
+
+
+alpha = 0.85 #damping factor
+
+# open compressed p2p_gnut archive
+
+comp_gnut = tarfile.open('p2p_gnut.tar.gz')
+uncomp_gnut = comp_gnut.extractall()
+comp_gnut.close()
+
+# load p2p_gnut graph into panda dataframe then numpy array
+
+df_gnut = pd.read_csv('p2p_gnut.csv', header=None)
+
+p2p_gnut_graph = df_gnut.iloc[:,:].values
+
 def maxnorm(x1, x2):
     norm = 0
     for i in range(len(x1)):
         if (abs(x1[i]-x2[i]) > norm):
             norm = abs(x1[i]-x2[i])
     return norm
-    
+
 accuracy = 10**(-6)
 
 def eigenvector (self, M):
@@ -41,11 +59,11 @@ def eigenvector (self, M):
     #M - hyperlink matrix
 
     n = len(M)
-    
+
     v = [] #personalization vector
     for i in range(n):
-        v.append(1/n)   
-        
+        v.append(1/n)
+
     d = []#dangling nodes column
     for i in range(n):
         iszero = 1
@@ -53,35 +71,35 @@ def eigenvector (self, M):
             if (M[i, j] != 0): iszero = 0
         d.append(iszero)
     d = np.matrix(d).T
-    
+
     S = M + d*v #matrix with fixed dangling nodes
-    
+
     e = [] # column of all 1's
     for i in range(n):
         e.append(1)
     e = np.matrix(e).T
-    
+
     G = alpha*S+(1-alpha)*e*v #Google matrix
-    
+
     x = []#iterations to optimum
     conv_norm = []#deviations from optimum
     x.append(v)
     k = 0
-    
+
     x_new = alpha*(np.matrix(x[k])*M)+alpha*(np.matrix(x[k])*d)*v+(1-alpha)*np.matrix(v)
     x.append(x_new.getA1())
     k+=1
-    
+
     while(maxnorm(x[k], x[k-1]) > accuracy):
         x_new = alpha*(np.matrix(x[k])*M)+alpha*(np.matrix(x[k])*d)*v+(1-alpha)*np.matrix(v)
         x.append(x_new.getA1())
         k+=1
-    
+
     for i in range(0, k-1):
         conv_norm.append(maxnorm(x[k], x[i]))
-        
+
     weights = x[k]
-    
+
     return (weights, conv_norm)
 
 def pagerank (self, M):
@@ -111,7 +129,7 @@ def robust_pagerank_euklid_test (self, M, alpha):
     Here we use euklid norms both for a and b.
 
     args:
-    
+
         M - contingency matrix of a graph, scaled to be a probabilistic matrix (numpy nxn array)
 
         alpha - regularization parameter
