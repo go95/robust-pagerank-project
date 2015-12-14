@@ -116,13 +116,47 @@ def eigenvector (self, M):
 
     return (weights, conv_norm)
     
-def DW(x, beta): # x - column, beta - constant
+def DW(zeta, beta): # zeta - column, beta - constant
+    N = len(zeta)
+    x = Variable(N)
+    constraints = [x >= 0, sum_entries(x) == 1]
+    y = entr(x)
     
-    return np.matrix([0]*len(x)).T
+    s = 0    
+    i = 0
+    while i < N:
+        s = s + zeta[i] * x[i]
+        i = i + 1
+    
+    obj = Minimize(s + (beta * (np.log(N) - sum_entries(y))))
+   
+    prob = Problem(obj, constraints)
+    x0 = x.value
+    prob.solve()
+   #print "status:", prob.status
+   #print "The value of -gradient:", -x.value
+    
+    return -x.value
 
-def DU(y, delta): # y - column, delta - constant
+def DU(eta, delta): #eta - column, delta - constant
+    N = len(eta)    
+    y = Variable(N)
+    constraints = [norm(y,1) <= 1]
+
+    s = 0    
+    i = 0
+    while i < N:
+        s = s + eta[i] * y[i]
+        i = i + 1    
     
-    return np.matrix([0]*len(y)).T
+    obj = Minimize(s + delta * 0.5 * sum_squares(y))
+    
+    prob = Problem(obj, constraints)
+    prob.solve()
+   #print "status:", prob.status
+   #print "The value of -gradient:", -y.value    
+    
+    return -y.value
     
 def q_x(x, y, M): #M is column-stochastic, x,y - columns
     v = M.T*(y)-y.T+eps*(x)/(euclnorm(x))
