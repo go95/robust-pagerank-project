@@ -17,7 +17,7 @@ small_graph = np.array([[0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                      [0,0,0,0,0,0,0,0.5,0.5,0,0,0]])
                    
 alpha = 0.85 #damping factor
-eps = 0.7
+eps = 5
 
 # open compressed p2p_gnut archive
 
@@ -69,15 +69,32 @@ def pagerank (M):
         conv_func - numpy vector with deviations from the optimum, described in terms of target function
         conv_norm - numpy vector with deviations from the optimum, described in terms of norm (euklid?)
     """
+      
+    n = len(M)
+
+    v = [] #personalization vector
+    for i in range(n):
+        v.append(1/n)
+
+    d = []#dangling nodes column
+    for i in range(n):
+        iszero = 1
+        for j in range(n):
+            if (M[i, j] != 0): iszero = 0
+        d.append(iszero)
+    d = np.matrix(d).T
+
+    M = M + d*v #matrix with fixed dangling nodes    
     
     M = M.T    
     
-    weights = np.zeros((M.shape[0], 1))
+    weights = []
     conv_func = np.array([]) #if it is more convenient to you, you can use simple python list here
     
     n = len(M)
      
     e = [1/n for i in range(n)]
+    e = np.matrix(e).T
     
     x = []#iterations to optimum
     conv_norm = []#deviations from optimum
@@ -85,21 +102,24 @@ def pagerank (M):
     k = 1
     
         
-    x_new = (1-(1.0/(k+1)))*M*(np.matrix(x[k-1]).T) + (1/(k+1))*(np.matrix(e).T)
-    x.append(x_new.getA1())
+    x_new = (1-1/(k+1))*M*x[k-1] + (1/(k+1))*e
+    x.append(x_new)
     k+=1  
     
-    while(phi(x[k-1], M) < phi(x[k-2], M)):
-        x_new = (1-1/(k+1))*M*(np.matrix(x[k-1]).T) + (1/(k+1))*(np.matrix(e).T)
-        x.append(x_new.getA1())
+    while(1):
+        x_new = (1-1/(k+1))*M*x[k-1] + (1/(k+1))*e
+        x.append(x_new)
         k+=1
-    
+        if (k > 10**(2)): break        
+        
     for i in range(0, k-1):
-        conv_norm.append(maxnormdiffer(x[k-1], x[i]))    
+        conv_norm.append(maxnormdiffer(x[k-1].getA1(), x[i].getA1()))    
     
     weights = x[k-1]
     
     return (weights, conv_norm)
 
+v = pagerank(p2p_gnut_graph[0])
+for i in range(50):
+    print(v[i])
 
-print(pagerank(p2p_gnut_graph))
