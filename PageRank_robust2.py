@@ -119,7 +119,7 @@ def pagerank (M):
     
     return (weights, conv_norm)
 
-v = pagerank(p2p_gnut_graph[0])
+v = pagerank(p2p_gnut_graph)[0]
 for i in range(50):
     print(v[i])
 
