@@ -17,7 +17,7 @@ small_graph = np.array([[0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                      [0,0,0,0,0,0,0,0.5,0.5,0,0,0]])
                    
 alpha = 0.85 #damping factor
-eps = 5
+eps = 10
 
 # open compressed p2p_gnut archive
 
@@ -27,9 +27,9 @@ comp_gnut.close()
 
 # load p2p_gnut graph into panda dataframe then numpy array
 
-df_gnut = pd.read_csv('p2p_gnut.csv', header=None)
+#df_gnut = pd.read_csv('p2p_gnut.csv', header=None)
 
-p2p_gnut_graph = df_gnut.iloc[:,:].values
+#p2p_gnut_graph = df_gnut.iloc[:,:].values
 
 def maxnorm(x):
     norm = 0
@@ -115,11 +115,15 @@ def pagerank (M):
     for i in range(0, k-1):
         conv_norm.append(maxnormdiffer(x[k-1].getA1(), x[i].getA1()))    
     
-    weights = x[k-1]
+    weights = x[k-1].getA1()
     
     return (weights, conv_norm)
 
-v = pagerank(p2p_gnut_graph)[0]
-for i in range(50):
-    print(v[i])
+print(pagerank(small_graph)[0])
 
+#v = pagerank(small_graph)
+#np.savetxt('5PagerankSmall,eps=10,iter=100.txt', v[0], delimiter=" ")
+#np.savetxt('5Conv,eps=10,iter=100.txt', v[1], delimiter=" ")
+
+#f = open('test.txt', 'r')
+#print(f.read())
