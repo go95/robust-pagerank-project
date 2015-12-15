@@ -116,56 +116,9 @@ def eigenvector (self, M):
 
     return (weights, conv_norm)
     
-def DW(zeta, beta): # zeta - column, beta - constant
-    N = len(zeta)
-    x = Variable(N)
-    constraints = [x >= 0, sum_entries(x) == 1]
-    y = entr(x)
-    
-    s = 0    
-    i = 0
-    while i < N:
-        s = s + zeta[i] * x[i]
-        i = i + 1
-    
-    obj = Minimize(s + (beta * (np.log(N) - sum_entries(y))))
-   
-    prob = Problem(obj, constraints)
-    x0 = x.value
-    prob.solve()
-   #print "status:", prob.status
-   #print "The value of -gradient:", -x.value
-    
-    return -x.value
+  
 
-def DU(eta, delta): #eta - column, delta - constant
-    N = len(eta)    
-    y = Variable(N)
-    constraints = [norm(y,1) <= 1]
-
-    s = 0    
-    i = 0
-    while i < N:
-        s = s + eta[i] * y[i]
-        i = i + 1    
-    
-    obj = Minimize(s + delta * 0.5 * sum_squares(y))
-    
-    prob = Problem(obj, constraints)
-    prob.solve()
-   #print "status:", prob.status
-   #print "The value of -gradient:", -y.value    
-    
-    return -y.value
-    
-def q_x(x, y, M): #M is column-stochastic, x,y - columns
-    v = M.T*(y)-y.T+eps*(x)/(euclnorm(x))
-    return v
-    
-def q_y(x, y, M): #M is column-stochastic, x,y - columns
-    return (M*(x)-x)    
-
-def pagerank (M, beta0, delta0): #M is column-stochastic
+def pagerank (M): #M is row-stochastic
     """
     The function gets a contingency matrix of a graph and computes the pagerank score with alpha = 0.85
     It implements an iterative approach and also returns the arrays of deviations
@@ -178,61 +131,54 @@ def pagerank (M, beta0, delta0): #M is column-stochastic
         conv_func - numpy vector with deviations from the optimum, described in terms of target function
         conv_norm - numpy vector with deviations from the optimum, described in terms of norm (euklid?)
     """
-    weigths = []
-    conv_norm = [] 
-    conv_iter = []#iterations to optimum
+    n = len(M)
+
+    v = [] #personalization vector
+    for i in range(n):
+        v.append(1/n)
+
+    d = []#dangling nodes column
+    for i in range(n):
+        iszero = 1
+        for j in range(n):
+            if (M[i, j] != 0): iszero = 0
+        d.append(iszero)
+    d = np.matrix(d).T
+
+    M = M + d*v #matrix with fixed dangling nodes    
     
-    N = len(M)
+    M = M.T    
     
-    dzeta0 = np.matrix([0]*N).T
-    eta0 = np.matrix([0]*N).T
+    weights = []
+    conv_func = np.array([]) #if it is more convenient to you, you can use simple python list here
     
-    x0 = -DW(dzeta0, beta0)
-    y0 = -DU(eta0, delta0)
+    n = len(M)
+     
+    e = [1/n for i in range(n)]
+    e = np.matrix(e).T
     
-    x = []
-    y = []
-    dzeta = []
-    eta = []
-    
+    x = []#iterations to optimum
+    conv_norm = []#deviations from optimum
+    x.append(e)
     k = 1
-    x.append(x0)
-    y.append(y0)
-    dzeta.append(dzeta0)
-    eta.append(eta0)
     
-    xaver = np.matrix([0]*N).T #x average        
-    
-    beta = beta0*math.sqrt(k)
-    delta = delta0*math.sqrt(k)
-    dzeta.append((dzeta[k-1] + q_x(x[k-1], y[k-1], M)))
-    eta.append((eta[k-1] - q_y(x[k-1], y[k-1], M)))
-    x.append(-DW(dzeta[k-1], beta))
-    y.append(-DU(eta[k-1], delta))
-    
-    xaver = xaver*(1-1/k)+(x[k-1])*(1/k)
-    conv_iter.append([0]*N)    
-    conv_iter.append(xaver.getA1())
-    k+=1    
-    
-    while(maxnormdiffer(conv_iter[k-1], conv_iter[k-2]) > 10**(-6)):
-        beta = beta0*math.sqrt(k)
-        delta = delta0*math.sqrt(k)
-        dzeta.append(dzeta[k-1] + q_x(x[k-1], y[k-1], M))
-        eta.append(eta[k-1] - q_y(x[k-1], y[k-1], M))
-        x.append(-DW(dzeta[k-1], beta))
-        y.append(-DU(eta[k-1], delta))
         
-        xaver = xaver*(1-1/k)+x[:-1]*(1/n)
-        conv_iter.append(xaver.getA1())
+    x_new = (1-1/(k+1))*M*x[k-1] + (1/(k+1))*e
+    x.append(x_new)
+    k+=1  
+    
+    while(1):
+        x_new = (1-1/(k+1))*M*x[k-1] + (1/(k+1))*e
+        x.append(x_new)
         k+=1
+        if (k > 10**(2)): break        
         
-    weigths = xaver.getA1()
+    for i in range(0, k-1):
+        conv_norm.append(maxnormdiffer(x[k-1].getA1(), x[i].getA1()))    
     
-    for i in range(k):
-        conv_norm.append(maxnormdiffer(conv_iter[k-1], xaver))
+    weights = x[k-1].getA1()
     
-    return weigths, conv_norm
+    return (weights, conv_norm)
 
 # note: if it is more convenient to you, you can use one function with additional parameter instead of two functions for robust pagerank
 
